@@ -1,0 +1,93 @@
+Sub HighlightCellsBasedOnConditions()
+    Dim ws As Worksheet
+    Dim lastColumn As Long
+    Dim lastRow As Long
+    Dim i As Long, startCol As Long, nextStartCol As Long, endCol As Long
+    Dim sumValue As Double
+    Dim j As Long, k As Long
+    Const threshold As Double = 10
+    
+    On Error GoTo ErrorHandler
+    
+    ' アクティブシートを設定
+    Set ws = ActiveSheet
+        
+    ' 塗りつぶしなし
+    Cells.Interior.ColorIndex = 0
+    
+    ' 最終行を取得
+    lastRow = ws.Cells(ws.Rows.Count, 1).End(xlUp).row
+    
+    ' 2行目の最終列を取得
+    lastColumn = ws.Cells(2, ws.Columns.Count).End(xlToLeft).Column
+    
+    ' 各列をループ
+    For i = 1 To lastColumn
+        ' 1行目の日付セルを探す
+        If IsDate(ws.Cells(1, i).Value) Then
+            ' 日付のペアの開始列
+            startCol = i
+            
+            ' 次の日付セルを探す
+            nextStartCol = FindNextDateColumn(ws, startCol, lastColumn)
+            
+            
+            ' 次の日付が見つかった場合、endColを設定
+            If nextStartCol <= lastColumn Then
+                endCol = nextStartCol - 1
+            Else
+                endCol = lastColumn
+            End If
+            
+            ' 各行について条件に基づきセルを塗りつぶす
+            For j = 3 To lastRow
+                ' 3行目の合計を初期化
+                sumValue = CalculateSum(ws, j, startCol, endCol)
+                
+                ' 合計が閾値未満の場合、該当セルを黄色に塗りつぶす
+                If sumValue < threshold Then
+                    HighlightCells ws, j, startCol, endCol, RGB(255, 255, 0)
+                End If
+            Next j
+        End If
+    Next i
+    
+    ' 完了メッセージ
+    MsgBox "条件に基づくセルの塗りつぶしが完了しました。"
+    Exit Sub
+    
+ErrorHandler:
+    MsgBox "エラーが発生しました: " & Err.Description, vbCritical
+
+End Sub
+
+Function FindNextDateColumn(ws As Worksheet, startCol As Long, lastColumn As Long) As Long
+    Dim nextCol As Long
+    nextCol = startCol + 1
+    Do While nextCol <= lastColumn And Not IsDate(ws.Cells(1, nextCol).Value)
+        nextCol = nextCol + 1
+    Loop
+    FindNextDateColumn = nextCol
+End Function
+
+Function CalculateSum(ws As Worksheet, row As Long, startCol As Long, endCol As Long) As Double
+    Dim sumValue As Double
+    Dim col As Long
+    sumValue = 0
+    For col = startCol To endCol
+        If IsNumeric(ws.Cells(row, col).Value) Then
+            sumValue = sumValue + ws.Cells(row, col).Value
+        End If
+    Next col
+    CalculateSum = sumValue
+End Function
+
+Sub HighlightCells(ws As Worksheet, row As Long, startCol As Long, endCol As Long, color As Long)
+    Dim col As Long
+    For col = startCol To endCol
+        If IsNumeric(ws.Cells(row, col).Value) Then
+            ws.Cells(row, col).Interior.color = color
+        End If
+    Next col
+End Sub
+
